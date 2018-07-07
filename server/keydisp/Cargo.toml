@@ -1,0 +1,9 @@
+[package]
+name = "keydisp"
+version = "0.1.0"
+authors = ["Erlend Tobiassen <erlentob@stud.ntnu.no>"]
+
+[dependencies]
+winapi = { version = "0.3", features = ["winuser", "libloaderapi"] }
+scancode = "0.1"
+tungstenite = "0.5"

@@ -1,0 +1,13 @@
+body {
+    font-family: 'Ubuntu Mono', monospace;
+    font-size: 3rem; color: black;
+}
+
+ul {
+    position: absolute;
+    bottom: 0;
+    padding: 0;
+}
+li {
+    list-style-type: none;
+}

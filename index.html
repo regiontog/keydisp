@@ -1,0 +1,50 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
+</head>
+
+<body>
+    <ul id="keylist"></ul>
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script>
+    var websocket = new ReconnectingWebSocket('ws://127.0.0.1:2945');
+    var list = document.getElementById("keylist");
+    var last_list_elem;
+
+    function push_list_elem() {
+        var li = document.createElement("li");
+        var div = document.createElement("div");
+
+        li.appendChild(div);
+        list.appendChild(li);
+        // window.scrollTo(0, document.body.scrollHeight);
+
+        last_list_elem = div;
+
+        setTimeout(function () {
+            list.removeChild(list.children[0]);
+        }, 5000);
+    }
+
+    var last_event = new Date().getTime();
+
+    websocket.onmessage = function (msg) {
+        var event_time = new Date().getTime();
+
+        if (event_time - last_event > 250 || (last_list_elem && last_list_elem.innerHTML.length > 6)) {
+            push_list_elem();
+        }
+
+        last_list_elem.innerHTML += msg.data;
+        last_event = event_time;
+    }
+</script>
+</html>
