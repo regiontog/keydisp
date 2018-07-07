@@ -259,6 +259,8 @@ fn main() {
     // TODO:
     // * Cleanup the conversion to Scancode enum
     // * Multiple target windows?
+    // * Settings file
+    // * Small gui for window? Or windows service?
 
     let mut char_iter = BufferedUtf16Iterator::new();
     let mut input_window = None;
