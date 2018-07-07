@@ -14,4 +14,6 @@ cd server\keydisp
 cargo install
 ```
 
-Run ```keydisp```. Press F10 to select the current foreground window. Now the navigate to ```index.html```, it should display keyboard input from the selected window. To use with OBS add ```index.html``` as a browser source to OBS.
+Run ```keydisp```. Press F10 to select the current foreground window. Then navigate to ```index.html```, it should display keyboard input from the selected window. 
+
+To use with OBS add ```index.html``` as a browser source to OBS.
