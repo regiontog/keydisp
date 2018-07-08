@@ -45,14 +45,14 @@ unsafe extern "system" fn wh_keyboard_callback(code: i32, w_param: usize, l_para
         let kb_hook: KBDLLHOOKSTRUCT = mem::transmute(*(l_param as *const KBDLLHOOKSTRUCT));
 
         match w_param as UINT {
-            WM_KEYUP => if let Some(sc) = keycode_to_key(kb_hook.vkCode as i32) {
+            WM_KEYUP => if let Some(sc) = VK_SCANCODE_MAPPING[kb_hook.vkCode as usize] {
                 callback(Event::Key {
                     scancode: sc,
                     key_state: KeyState::Released,
                 })
             },
             WM_KEYDOWN => {
-                if let Some(sc) = keycode_to_key(kb_hook.vkCode as i32) {
+                if let Some(sc) = VK_SCANCODE_MAPPING[kb_hook.vkCode as usize] {
                     callback(Event::Key {
                         scancode: sc,
                         key_state: KeyState::Pressed,
@@ -185,7 +185,7 @@ impl Iterator for BufferedUtf16Iterator {
         } else {
             let u2 = match self.buffer.pop_front() {
                 Some(u2) => u2,
-                // eof
+                // eof, should wait for next u16 instead of err'ing?
                 None => return Some(Err(DecodeUtf16Error { code: u })),
             };
             if u2 < 0xDC00 || u2 > 0xDFFF {
@@ -202,96 +202,229 @@ impl Iterator for BufferedUtf16Iterator {
     }
 }
 
-fn keycode_to_key(keycode: i32) -> Option<Scancode> {
-    let mut key = match keycode {
-        winuser::VK_F1 => Some(Scancode::F1),
-        winuser::VK_F2 => Some(Scancode::F2),
-        winuser::VK_F3 => Some(Scancode::F3),
-        winuser::VK_F4 => Some(Scancode::F4),
-        winuser::VK_F5 => Some(Scancode::F5),
-        winuser::VK_F6 => Some(Scancode::F6),
-        winuser::VK_F7 => Some(Scancode::F7),
-        winuser::VK_F8 => Some(Scancode::F8),
-        winuser::VK_F9 => Some(Scancode::F9),
-        winuser::VK_F10 => Some(Scancode::F10),
-        winuser::VK_F11 => Some(Scancode::F11),
-        winuser::VK_F12 => Some(Scancode::F12),
-        winuser::VK_SPACE => Some(Scancode::Space),
-        winuser::VK_LCONTROL => Some(Scancode::LeftControl),
-        winuser::VK_RCONTROL => Some(Scancode::RightControl),
-        winuser::VK_LSHIFT => Some(Scancode::LeftShift),
-        winuser::VK_RSHIFT => Some(Scancode::RightShift),
-        winuser::VK_LMENU => Some(Scancode::LeftAlt),
-        winuser::VK_RMENU => Some(Scancode::RightAlt),
-        winuser::VK_RETURN => Some(Scancode::Enter),
-        winuser::VK_BACK => Some(Scancode::Backspace),
-        winuser::VK_TAB => Some(Scancode::Tab),
-        winuser::VK_ESCAPE => Some(Scancode::Escape),
-        winuser::VK_PRIOR => Some(Scancode::PageUp),
-        winuser::VK_NEXT => Some(Scancode::PageDown),
-        winuser::VK_END => Some(Scancode::End),
-        winuser::VK_HOME => Some(Scancode::Home),
-        winuser::VK_LEFT => Some(Scancode::Left),
-        winuser::VK_RIGHT => Some(Scancode::Right),
-        winuser::VK_UP => Some(Scancode::Up),
-        winuser::VK_DOWN => Some(Scancode::Down),
-        winuser::VK_INSERT => Some(Scancode::Insert),
-        winuser::VK_DELETE => Some(Scancode::Delete),
-        winuser::VK_OEM_1 => Some(Scancode::Semicolon),
-        winuser::VK_OEM_PLUS => Some(Scancode::Equals),
-        winuser::VK_OEM_COMMA => Some(Scancode::Comma),
-        winuser::VK_OEM_MINUS => Some(Scancode::Minus),
-        winuser::VK_OEM_PERIOD => Some(Scancode::Period),
-        winuser::VK_OEM_2 => Some(Scancode::Slash),
-        winuser::VK_OEM_3 => Some(Scancode::Grave),
-        winuser::VK_OEM_4 => Some(Scancode::LeftBracket),
-        winuser::VK_OEM_5 => Some(Scancode::Backslash),
-        winuser::VK_OEM_6 => Some(Scancode::RightBracket),
-        winuser::VK_OEM_7 => Some(Scancode::Apostrophe),
-        _ => None,
-    };
+lazy_static! {
+    static ref VK_SCANCODE_MAPPING: [Option<Scancode>; 256] = {
+        let mut codes = vec![
+            None,                        // Not in spec
+            None,                        // VK_LBUTTON,
+            None,                        // VK_RBUTTON,
+            None,                        // VK_CANCEL,
+            None,                        // VK_MBUTTON,
+            None,                        // VK_XBUTTON1,
+            None,                        // VK_XBUTTON2,
+            None,                        // Undefined
+            Some(Scancode::Backspace),   // VK_BACK,
+            Some(Scancode::Tab),         // VK_TAB,
+            None,                        // Reserved
+            None,                        // Reserved
+            None,                        // VK_CLEAR,
+            Some(Scancode::Enter),       // VK_RETURN
+            None,                        // Undefined
+            None,                        // Undefined
+            None,                        // VK_SHIFT
+            None,                        // VK_CONTROL
+            None,                        // VK_MENU
+            Some(Scancode::Pause),       // VK_PAUSE
+            Some(Scancode::CapsLock),    // VK_CAPITAL
+            None,                        // VK_KANA | VK_HANGUEL | VK_HANGUL
+            None,                        // Undefined
+            None,                        // VK_JUNJA
+            None,                        // VK_FINAL
+            None,                        // VK_HANJA | VK_KANJI
+            None,                        // Undefined
+            Some(Scancode::Escape),      // VK_ESCAPE
+            None,                        // VK_CONVERT
+            None,                        // VK_NONCONVERT
+            None,                        // VK_ACCEPT
+            None,                        // VK_MODECHANGE
+            Some(Scancode::Space),       // VK_SPACE
+            Some(Scancode::PageUp),      // VK_PRIOR
+            Some(Scancode::PageDown),    // VK_NEXT
+            Some(Scancode::End),         // VK_END
+            Some(Scancode::Home),        // VK_HOME
+            Some(Scancode::Left),        // VK_LEFT
+            Some(Scancode::Up),          // VK_UP
+            Some(Scancode::Right),       // VK_RIGHT
+            Some(Scancode::Down),        // VK_DOWN
+            None,                        // VK_SELECT
+            Some(Scancode::PrintScreen), // VK_PRINT
+            None,                        // VK_EXECUTE
+            None,                        // VK_SNAPSHOT
+            Some(Scancode::Insert),      // VK_INSERT
+            Some(Scancode::Delete),      // VK_DELETE
+            None,                        // VK_HELP
+            Some(Scancode::Num0),        // 0 key
+            Some(Scancode::Num1),        // 1 key
+            Some(Scancode::Num2),        // 2 key
+            Some(Scancode::Num3),        // 3 key
+            Some(Scancode::Num4),        // 4 key
+            Some(Scancode::Num5),        // 5 key
+            Some(Scancode::Num6),        // 6 key
+            Some(Scancode::Num7),        // 7 key
+            Some(Scancode::Num8),        // 8 key
+            Some(Scancode::Num9),        // 9 key
+        ];
 
-    if key.is_none() {
-        let keycode = keycode as u8;
-        key = match keycode as char {
-            '0' => Some(Scancode::Num0),
-            '1' => Some(Scancode::Num1),
-            '2' => Some(Scancode::Num2),
-            '3' => Some(Scancode::Num3),
-            '4' => Some(Scancode::Num4),
-            '5' => Some(Scancode::Num5),
-            '6' => Some(Scancode::Num6),
-            '7' => Some(Scancode::Num7),
-            '8' => Some(Scancode::Num8),
-            '9' => Some(Scancode::Num9),
-            'A' => Some(Scancode::A),
-            'B' => Some(Scancode::B),
-            'C' => Some(Scancode::C),
-            'D' => Some(Scancode::D),
-            'E' => Some(Scancode::E),
-            'F' => Some(Scancode::F),
-            'G' => Some(Scancode::G),
-            'H' => Some(Scancode::H),
-            'I' => Some(Scancode::I),
-            'J' => Some(Scancode::J),
-            'K' => Some(Scancode::K),
-            'L' => Some(Scancode::L),
-            'M' => Some(Scancode::M),
-            'N' => Some(Scancode::N),
-            'O' => Some(Scancode::O),
-            'P' => Some(Scancode::P),
-            'Q' => Some(Scancode::Q),
-            'R' => Some(Scancode::R),
-            'S' => Some(Scancode::S),
-            'T' => Some(Scancode::T),
-            'U' => Some(Scancode::U),
-            'V' => Some(Scancode::V),
-            'W' => Some(Scancode::W),
-            'X' => Some(Scancode::X),
-            'Y' => Some(Scancode::Y),
-            'Z' => Some(Scancode::Z),
-            _ => None,
+        codes.extend(vec![None; 7]); // Undefined
+        codes.extend(vec![
+            Some(Scancode::A),           // A key
+            Some(Scancode::B),           // B key
+            Some(Scancode::C),           // C key
+            Some(Scancode::D),           // D key
+            Some(Scancode::E),           // E key
+            Some(Scancode::F),           // F key
+            Some(Scancode::G),           // G key
+            Some(Scancode::H),           // H key
+            Some(Scancode::I),           // I key
+            Some(Scancode::J),           // J key
+            Some(Scancode::K),           // K key
+            Some(Scancode::L),           // L key
+            Some(Scancode::M),           // M key
+            Some(Scancode::N),           // N key
+            Some(Scancode::O),           // O key
+            Some(Scancode::P),           // P key
+            Some(Scancode::Q),           // Q key
+            Some(Scancode::R),           // R key
+            Some(Scancode::S),           // S key
+            Some(Scancode::T),           // T key
+            Some(Scancode::U),           // U key
+            Some(Scancode::V),           // V key
+            Some(Scancode::W),           // W key
+            Some(Scancode::X),           // X key
+            Some(Scancode::Y),           // Y key
+            Some(Scancode::Z),           // Z key
+            None,                        // VK_LWIN
+            None,                        // VK_RWIN
+            None,                        // VK_APPS
+            None,                        // Reserved
+            None,                        // VK_SLEEP
+            Some(Scancode::Pad0),        // VK_NUMPAD0
+            Some(Scancode::Pad1),        // VK_NUMPAD1
+            Some(Scancode::Pad2),        // VK_NUMPAD2
+            Some(Scancode::Pad3),        // VK_NUMPAD3
+            Some(Scancode::Pad4),        // VK_NUMPAD4
+            Some(Scancode::Pad5),        // VK_NUMPAD5
+            Some(Scancode::Pad6),        // VK_NUMPAD6
+            Some(Scancode::Pad7),        // VK_NUMPAD7
+            Some(Scancode::Pad8),        // VK_NUMPAD8
+            Some(Scancode::Pad9),        // VK_NUMPAD9
+            Some(Scancode::PadMultiply), // VK_MULTIPLY
+            Some(Scancode::PadPlus),     // VK_ADD
+            None,                        // VK_SEPARATOR
+            Some(Scancode::PadMinus),    // VK_SUBTRACT
+            Some(Scancode::PadDecimal),  // VK_DECIMAL
+            Some(Scancode::PadDivide),   // VK_DIVIDE
+            Some(Scancode::F1),          // VK_F1
+            Some(Scancode::F2),          // VK_F2
+            Some(Scancode::F3),          // VK_F3
+            Some(Scancode::F4),          // VK_F4
+            Some(Scancode::F5),          // VK_F5
+            Some(Scancode::F6),          // VK_F6
+            Some(Scancode::F7),          // VK_F7
+            Some(Scancode::F8),          // VK_F8
+            Some(Scancode::F9),          // VK_F9
+            Some(Scancode::F10),         // VK_F10
+            Some(Scancode::F11),         // VK_F11
+            Some(Scancode::F12),         // VK_F12
+            None,                        // VK_F13
+            None,                        // VK_F14
+            None,                        // VK_F15
+            None,                        // VK_F16
+            None,                        // VK_F17
+            None,                        // VK_F18
+            None,                        // VK_F19
+            None,                        // VK_F20
+            None,                        // VK_F21
+            None,                        // VK_F22
+            None,                        // VK_F23
+            None,                        // VK_F24
+        ]);
+
+        codes.extend(vec![None; 8]); // Unassigned
+        codes.extend(vec![
+            Some(Scancode::NumLock),    // VK_NUMLOCK
+            Some(Scancode::ScrollLock), // VK_SCROLL
+        ]);
+
+        codes.extend(vec![None; 5]); // OEM specific x 4
+        codes.extend(vec![None; 9]); // Unassigned x 6
+
+        codes.extend(vec![
+            Some(Scancode::LeftShift),    // VK_LSHIFT
+            Some(Scancode::RightShift),   // VK_RSHIFT
+            Some(Scancode::LeftControl),  // VK_LCONTROL
+            Some(Scancode::RightControl), // VK_RCONTROL
+            Some(Scancode::LeftAlt),      // VK_LMENU
+            Some(Scancode::RightAlt),     // VK_RMENU
+            None,                         // VK_BROWSER_BACK
+            None,                         // VK_BROWSER_FORWARD
+            None,                         // VK_BROWSER_REFRESH
+            None,                         // VK_BROWSER_STOP
+            None,                         // VK_BROWSER_SEARCH
+            None,                         // VK_BROWSER_FAVORITES
+            None,                         // VK_BROWSER_HOME
+            None,                         // VK_VOLUME_MUTE
+            None,                         // VK_VOLUME_DOWN
+            None,                         // VK_VOLUME_UP
+            None,                         // VK_MEDIA_NEXT_TRACK
+            None,                         // VK_MEDIA_PREV_TRACK
+            None,                         // VK_MEDIA_STOP
+            None,                         // VK_MEDIA_PLAY_PAUSE
+            None,                         // VK_LAUNCH_MAIL
+            None,                         // VK_LAUNCH_MEDIA_SELECT
+            None,                         // VK_LAUNCH_APP1
+            None,                         // VK_LAUNCH_APP2
+            None,                         // Reserved
+            None,                         // Reserved
+            Some(Scancode::Semicolon),    // VK_OEM_1
+            Some(Scancode::Equals),       // VK_OEM_PLUS
+            Some(Scancode::Comma),        // VK_OEM_COMMA
+            Some(Scancode::Minus),        // VK_OEM_MINUS
+            Some(Scancode::Period),       // VK_OEM_PERIOD
+            Some(Scancode::Slash),        // VK_OEM_2
+            Some(Scancode::Grave),        // VK_OEM_3
+        ]);
+
+        codes.extend(vec![None; 23]); // Reserved
+        codes.extend(vec![None; 3]);  // Unassigned
+
+        codes.extend(vec![
+            Some(Scancode::LeftBracket),  // VK_OEM_4
+            Some(Scancode::Backslash),    // VK_OEM_5
+            Some(Scancode::RightBracket), // VK_OEM_6
+            Some(Scancode::Apostrophe),   // VK_OEM_7
+            None,                         // VK_OEM_8
+            None,                         // Reserved
+            None,                         // OEM Specific
+            None,                         // VK_OEM_102
+            None,                         // OEM specific
+            None,                         // OEM specific
+            None,                         // VK_PROCESSKEY
+            None,                         // OEM specific
+            None,                         // VK_PACKET
+            None,                         // Unassigned
+        ]);
+
+        codes.extend(vec![None; 13]); // OEM specific
+        codes.extend(vec![
+            None, // VK_ATTN
+            None, // VK_CRSEL
+            None, // VK_EXSEL
+            None, // VK_EREOF
+            None, // VK_PLAY
+            None, // VK_ZOOM
+            None, // VK_NONAME
+            None, // VK_PA1
+            None, // VK_OEM_CLEAR
+        ]);
+
+        assert!(codes.len() == 0xff);
+
+        let mut result = [None; 256];
+        for (i, code) in codes.iter_mut().enumerate() {
+            result[i] = *code;
         }
-    }
-    key
+
+        result
+    };
 }

@@ -1,4 +1,8 @@
 #![feature(drain_filter)]
+
+#[macro_use]
+extern crate lazy_static;
+
 extern crate scancode;
 extern crate tungstenite;
 extern crate winapi;
@@ -64,7 +68,6 @@ fn get_send_char(key: Scancode) -> Option<char> {
 
 fn main() {
     // TODO:
-    // * Cleanup the conversion to Scancode enum
     // * Multiple target windows?
     // * Settings file
     // * Small gui for window? Or windows service?
@@ -131,7 +134,7 @@ fn main() {
 
         if Some(fg_window) == input_window {
             let maybe_char = match event {
-                Event::Char(c) if !c.is_control() && !c.is_whitespace() => Some(c),
+                Event::Char(c) if !(c.is_control() || c.is_whitespace()) => Some(c),
                 Event::Char(_) => None,
                 Event::Key {
                     scancode,
